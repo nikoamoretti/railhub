@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.log
+*.json
+!commtrex_facility_urls.txt
+!commtrex_railcar_storage_urls.txt
+.env
+venv/
