@@ -74,12 +74,6 @@
             transition: background 0.2s;
         }
         button:hover { background: #1a365d; }
-        .filters {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-            flex-wrap: wrap;
-        }
         .results-info {
             margin-bottom: 1rem;
             color: #666;
@@ -102,8 +96,6 @@
         }
         .facility-type {
             display: inline-block;
-            background: #ebf8ff;
-            color: #2b6cb0;
             padding: 0.25rem 0.75rem;
             border-radius: 20px;
             font-size: 0.75rem;
@@ -111,6 +103,7 @@
             text-transform: uppercase;
             margin-bottom: 0.75rem;
         }
+        .facility-type.transload { background: #ebf8ff; color: #2b6cb0; }
         .facility-type.storage { background: #f0fff4; color: #276749; }
         .facility-name {
             font-size: 1.25rem;
@@ -167,6 +160,7 @@
         @media (max-width: 600px) {
             header h1 { font-size: 1.75rem; }
             .facility-grid { grid-template-columns: 1fr; }
+            .stats { flex-direction: column; gap: 1rem; }
         }
     </style>
 </head>
@@ -176,15 +170,15 @@
         <p>Free Rail Freight Directory — Transload & Railcar Storage Facilities</p>
         <div class="stats">
             <div class="stat">
-                <div class="stat-number" id="transloadCount">0</div>
+                <div class="stat-number" id="transloadCount">-</div>
                 <div class="stat-label">Transload Facilities</div>
             </div>
             <div class="stat">
-                <div class="stat-number" id="storageCount">0</div>
+                <div class="stat-number" id="storageCount">-</div>
                 <div class="stat-label">Storage Facilities</div>
             </div>
             <div class="stat">
-                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-number" id="totalCount">-</div>
                 <div class="stat-label">Total Locations</div>
             </div>
         </div>
@@ -222,31 +216,17 @@
         let allFacilities = [];
         let filteredFacilities = [];
 
-        // Facility data embedded directly
-        const FACILITY_DATA = `data:text/csv;base64,`,'FACILITIES_CSV_BASE64','`;
-
         async function loadData() {
             try {
-                // Parse transload facilities
+                // Load transload facilities
                 const transloadResponse = await fetch('facilities.json');
-                if (transloadResponse.ok) {
-                    const transloadData = await transloadResponse.json();
-                    allFacilities = transloadData.map(f => ({...f, type: 'transload'}));
-                } else {
-                    // Fallback: parse embedded CSV
-                    await parseCSVData();
-                }
+                const transloadData = await transloadResponse.json();
+                allFacilities = transloadData.map(f => ({...f, type: 'transload'}));
 
                 // Load storage facilities
-                try {
-                    const storageResponse = await fetch('storage.json');
-                    if (storageResponse.ok) {
-                        const storageData = await storageResponse.json();
-                        allFacilities = allFacilities.concat(storageData.map(f => ({...f, type: 'storage'})));
-                    }
-                } catch (e) {
-                    console.log('Storage data not available');
-                }
+                const storageResponse = await fetch('storage.json');
+                const storageData = await storageResponse.json();
+                allFacilities = allFacilities.concat(storageData.map(f => ({...f, type: 'storage'})));
 
                 updateStats();
                 populateStateFilter();
@@ -256,40 +236,6 @@
                 document.getElementById('results').innerHTML = 
                     '<div class="no-results">Error loading data. Please refresh.</div>';
             }
-        }
-
-        async function parseCSVData() {
-            // Parse transload CSV
-            const transloadCsv = atob(FACILITIES_CSV_BASE64);
-            const transloadRows = parseCSV(transloadCsv);
-            allFacilities = transloadRows.map(row => ({
-                id: row.id,
-                name: row.name,
-                street_address: row.street_address,
-                city: row.city,
-                state: row.state,
-                zip_code: row.zip_code,
-                phone: row.phone,
-                description: row.description,
-                product_types: row.product_types,
-                railroads: row.railroads,
-                url: row.url,
-                type: 'transload'
-            }));
-        }
-
-        function parseCSV(csv) {
-            const lines = csv.split('\\n');
-            const headers = lines[0].split(',').map(h => h.trim());
-            const rows = [];
-            for (let i = 1; i < lines.length; i++) {
-                if (!lines[i].trim()) continue;
-                const values = lines[i].split(',');
-                const row = {};
-                headers.forEach((h, idx) => row[h] = values[idx] || '');
-                rows.push(row);
-            }
-            return rows;
         }
 
         function updateStats() {
@@ -338,7 +284,7 @@
             info.textContent = `Showing ${filteredFacilities.length.toLocaleString()} of ${allFacilities.length.toLocaleString()} facilities`;
 
             if (filteredFacilities.length === 0) {
-                container.innerHTML = '<div class="no-results">No facilities found matching your criteria.</div>';
+                container.innerHTML = '<div class="no-results">No facilities found.</div>';
                 return;
             }
 
@@ -352,11 +298,11 @@
                     <div class="facility-details">
                         ${f.street_address ? `<p>${escapeHtml(f.street_address)}</p>` : ''}
                         ${f.phone ? `<p>📞 ${escapeHtml(f.phone)}</p>` : ''}
-                        ${f.railroads ? `<p>🚃 ${escapeHtml(f.railroads.substring(0, 100))}${f.railroads.length > 100 ? '...' : ''}</p>` : ''}
+                        ${f.railroads ? `<p>🚃 ${escapeHtml(String(f.railroads).substring(0, 100))}${String(f.railroads).length > 100 ? '...' : ''}</p>` : ''}
                     </div>
                     ${f.product_types ? `
                     <div class="facility-tags">
-                        ${f.product_types.split(';').slice(0, 5).map(t => 
+                        ${String(f.product_types).split(';').slice(0, 5).map(t => 
                             `<span class="tag">${escapeHtml(t.trim())}</span>`
                         ).join('')}
                     </div>
@@ -377,16 +323,14 @@
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
-            div.textContent = text;
+            div.textContent = String(text);
             return div.innerHTML;
         }
 
-        // Search on Enter key
         document.getElementById('searchInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') searchFacilities();
         });
 
-        // Load data on page load
         loadData();
     </script>
 </body>
