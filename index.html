@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Railhub - Free Rail Freight Directory</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        header {
+            background: linear-gradient(135deg, #1a365d 0%, #2c5282 100%);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+        header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        header p { opacity: 0.9; font-size: 1.1rem; }
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .stat {
+            background: rgba(255,255,255,0.1);
+            padding: 1rem 2rem;
+            border-radius: 8px;
+        }
+        .stat-number { font-size: 2rem; font-weight: bold; }
+        .stat-label { font-size: 0.9rem; opacity: 0.8; }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        .search-section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        .search-box {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        input[type="text"], select {
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            flex: 1;
+            min-width: 200px;
+        }
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #2c5282;
+        }
+        button {
+            background: #2c5282;
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background: #1a365d; }
+        .filters {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        .results-info {
+            margin-bottom: 1rem;
+            color: #666;
+        }
+        .facility-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        .facility-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .facility-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .facility-type {
+            display: inline-block;
+            background: #ebf8ff;
+            color: #2b6cb0;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+        .facility-type.storage { background: #f0fff4; color: #276749; }
+        .facility-name {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin-bottom: 0.5rem;
+        }
+        .facility-location {
+            color: #666;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .facility-details {
+            font-size: 0.9rem;
+            color: #555;
+            margin-bottom: 1rem;
+        }
+        .facility-details p { margin-bottom: 0.25rem; }
+        .facility-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .tag {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #4a5568;
+        }
+        .facility-link {
+            display: inline-block;
+            color: #2c5282;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .facility-link:hover { text-decoration: underline; }
+        .loading, .no-results {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 2rem;
+        }
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.75rem; }
+            .facility-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🚂 Railhub</h1>
+        <p>Free Rail Freight Directory — Transload & Railcar Storage Facilities</p>
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number" id="transloadCount">0</div>
+                <div class="stat-label">Transload Facilities</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="storageCount">0</div>
+                <div class="stat-label">Storage Facilities</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">Total Locations</div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search by name, city, or state...">
+                <select id="stateFilter">
+                    <option value="">All States</option>
+                </select>
+                <select id="typeFilter">
+                    <option value="">All Types</option>
+                    <option value="transload">Transload</option>
+                    <option value="storage">Railcar Storage</option>
+                </select>
+                <button onclick="searchFacilities()">Search</button>
+            </div>
+        </div>
+
+        <div class="results-info" id="resultsInfo"></div>
+        
+        <div id="results" class="facility-grid">
+            <div class="loading">Loading facilities...</div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Railhub — Free rail freight data for everyone</p>
+        <p style="font-size: 0.9rem; margin-top: 0.5rem;">Data sourced from public records</p>
+    </footer>
+
+    <script>
+        let allFacilities = [];
+        let filteredFacilities = [];
+
+        // Facility data embedded directly
+        const FACILITY_DATA = `data:text/csv;base64,`,'FACILITIES_CSV_BASE64','`;
+
+        async function loadData() {
+            try {
+                // Parse transload facilities
+                const transloadResponse = await fetch('facilities.json');
+                if (transloadResponse.ok) {
+                    const transloadData = await transloadResponse.json();
+                    allFacilities = transloadData.map(f => ({...f, type: 'transload'}));
+                } else {
+                    // Fallback: parse embedded CSV
+                    await parseCSVData();
+                }
+
+                // Load storage facilities
+                try {
+                    const storageResponse = await fetch('storage.json');
+                    if (storageResponse.ok) {
+                        const storageData = await storageResponse.json();
+                        allFacilities = allFacilities.concat(storageData.map(f => ({...f, type: 'storage'})));
+                    }
+                } catch (e) {
+                    console.log('Storage data not available');
+                }
+
+                updateStats();
+                populateStateFilter();
+                searchFacilities();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('results').innerHTML = 
+                    '<div class="no-results">Error loading data. Please refresh.</div>';
+            }
+        }
+
+        async function parseCSVData() {
+            // Parse transload CSV
+            const transloadCsv = atob(FACILITIES_CSV_BASE64);
+            const transloadRows = parseCSV(transloadCsv);
+            allFacilities = transloadRows.map(row => ({
+                id: row.id,
+                name: row.name,
+                street_address: row.street_address,
+                city: row.city,
+                state: row.state,
+                zip_code: row.zip_code,
+                phone: row.phone,
+                description: row.description,
+                product_types: row.product_types,
+                railroads: row.railroads,
+                url: row.url,
+                type: 'transload'
+            }));
+        }
+
+        function parseCSV(csv) {
+            const lines = csv.split('\\n');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                const values = lines[i].split(',');
+                const row = {};
+                headers.forEach((h, idx) => row[h] = values[idx] || '');
+                rows.push(row);
+            }
+            return rows;
+        }
+
+        function updateStats() {
+            const transload = allFacilities.filter(f => f.type === 'transload').length;
+            const storage = allFacilities.filter(f => f.type === 'storage').length;
+            document.getElementById('transloadCount').textContent = transload.toLocaleString();
+            document.getElementById('storageCount').textContent = storage.toLocaleString();
+            document.getElementById('totalCount').textContent = allFacilities.length.toLocaleString();
+        }
+
+        function populateStateFilter() {
+            const states = [...new Set(allFacilities.map(f => f.state).filter(Boolean))].sort();
+            const select = document.getElementById('stateFilter');
+            states.forEach(state => {
+                const option = document.createElement('option');
+                option.value = state;
+                option.textContent = state;
+                select.appendChild(option);
+            });
+        }
+
+        function searchFacilities() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const stateFilter = document.getElementById('stateFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+
+            filteredFacilities = allFacilities.filter(f => {
+                const matchesSearch = !searchTerm || 
+                    (f.name && f.name.toLowerCase().includes(searchTerm)) ||
+                    (f.city && f.city.toLowerCase().includes(searchTerm)) ||
+                    (f.state && f.state.toLowerCase().includes(searchTerm));
+                
+                const matchesState = !stateFilter || f.state === stateFilter;
+                const matchesType = !typeFilter || f.type === typeFilter;
+
+                return matchesSearch && matchesState && matchesType;
+            });
+
+            displayResults();
+        }
+
+        function displayResults() {
+            const container = document.getElementById('results');
+            const info = document.getElementById('resultsInfo');
+            
+            info.textContent = `Showing ${filteredFacilities.length.toLocaleString()} of ${allFacilities.length.toLocaleString()} facilities`;
+
+            if (filteredFacilities.length === 0) {
+                container.innerHTML = '<div class="no-results">No facilities found matching your criteria.</div>';
+                return;
+            }
+
+            container.innerHTML = filteredFacilities.slice(0, 100).map(f => `
+                <div class="facility-card">
+                    <span class="facility-type ${f.type}">${f.type}</span>
+                    <h3 class="facility-name">${escapeHtml(f.name)}</h3>
+                    <div class="facility-location">
+                        📍 ${escapeHtml(f.city)}, ${escapeHtml(f.state)} ${escapeHtml(f.zip_code || '')}
+                    </div>
+                    <div class="facility-details">
+                        ${f.street_address ? `<p>${escapeHtml(f.street_address)}</p>` : ''}
+                        ${f.phone ? `<p>📞 ${escapeHtml(f.phone)}</p>` : ''}
+                        ${f.railroads ? `<p>🚃 ${escapeHtml(f.railroads.substring(0, 100))}${f.railroads.length > 100 ? '...' : ''}</p>` : ''}
+                    </div>
+                    ${f.product_types ? `
+                    <div class="facility-tags">
+                        ${f.product_types.split(';').slice(0, 5).map(t => 
+                            `<span class="tag">${escapeHtml(t.trim())}</span>`
+                        ).join('')}
+                    </div>
+                    ` : ''}
+                    ${f.url ? `<a href="${escapeHtml(f.url)}" target="_blank" class="facility-link">View on Commtrex →</a>` : ''}
+                </div>
+            `).join('');
+
+            if (filteredFacilities.length > 100) {
+                container.innerHTML += `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: #666;">
+                        Showing first 100 results. Refine your search to see more.
+                    </div>
+                `;
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Search on Enter key
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') searchFacilities();
+        });
+
+        // Load data on page load
+        loadData();
+    </script>
+</body>
+</html>
